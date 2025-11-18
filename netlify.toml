@@ -5,26 +5,3 @@
   from = "/"
   to = "/.netlify/functions/health"
   status = 200
-```
-
-## 🚀 **Quick Summary**
-
-**DON'T modify `health_checker.py`** - keep it as is.
-
-**DO create these 3 new files:**
-1. `netlify/functions/health.py` 
-2. `netlify/functions/test.py`
-3. `netlify/functions/slack-command.py`
-
-**Your final structure should look like:**
-```
-your-github-repo/
-├── netlify.toml
-├── requirements.txt
-├── runtime.txt  
-├── health_checker.py          ← Keep this (your business logic)
-└── netlify/
-    └── functions/
-        ├── health.py          ← Create this
-        ├── test.py            ← Create this
-        └── slack-command.py   ← Create this
