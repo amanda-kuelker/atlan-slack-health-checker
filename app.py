@@ -44,7 +44,7 @@ def verify_slack_signature(req):
     return hmac.compare_digest(my_signature, slack_signature)
 
 
-@app.route('/slack/atlan-setup', methods=['POST'])
+@app.route('/api/slack/atlan-setup', methods=['POST'])
 def handle_atlan_setup():
     """Handle /atlan-health slash command"""
 
@@ -94,7 +94,7 @@ def handle_atlan_setup():
         }), 500
 
 
-@app.route('/slack/interactive', methods=['POST'])
+@app.route('/api/slack/interactive', methods=['POST'])
 def handle_interactive():
     """Handle interactive components"""
 
@@ -108,7 +108,7 @@ def handle_interactive():
         return jsonify({"error": "Internal server error"}), 500
 
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 @app.route('/', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -120,6 +120,4 @@ def health_check():
     }), 200
 
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+handler = app
