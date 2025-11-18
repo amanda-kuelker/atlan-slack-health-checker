@@ -10,19 +10,6 @@ def home():
         "message": "Flask app is running on Vercel!"
     })
 
-# Add the /api prefix routes since Vercel rewrites them
-@app.route("/api")
-def api_home():
-    return home()
-
-@app.route("/api/test")
-def api_test():
-    return jsonify({
-        "message": "API Test endpoint working!",
-        "method": request.method,
-        "path": request.path
-    })
-
 @app.route("/test")
 def test():
     return jsonify({
@@ -30,10 +17,6 @@ def test():
         "method": request.method,
         "path": request.path
     })
-
-@app.route("/api/slack/atlan-setup", methods=["POST"])
-def api_slack_command():
-    return slack_command()
 
 @app.route("/slack/atlan-setup", methods=["POST"])
 def slack_command():
@@ -68,9 +51,7 @@ def not_found(e):
         "available_routes": [
             "/",
             "/test", 
-            "/api/test",
-            "/slack/atlan-setup (POST)",
-            "/api/slack/atlan-setup (POST)"
+            "/slack/atlan-setup (POST)"
         ]
     }), 404
 
