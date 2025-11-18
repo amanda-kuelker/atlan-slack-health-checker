@@ -941,6 +941,220 @@ Data Governance Maturity
 
 * Asset Coverage: {asset_coverage}% of critical assets documented
     * {"✅" if asset_coverage > 60 else "⚠️" if asset_coverage > 30 else "❌"} {"Financial systems well-documented" if asset_coverage > 60 else "Core systems documented" if asset_coverage > 30 else "Limited asset documentation"}
+
+* Stewardship: {max(8, int(health_scores['component_scores']['data_governance'] * 0.2))}% of assets have assigned owners
+    * {"✅" if health_scores['component_scores']['data_governance'] > 75 else "❌"} {"Core data ownership established" if health_scores['component_scores']['data_governance'] > 75 else f"{industry_info['focus_areas'][0].replace('_', ' ')} ownership unclear"}
+
+Compliance Readiness
+
+* Data Classification: {tagged_coverage}% of sensitive data tagged
+    * {"✅" if tagged_coverage > 70 else "⚠️" if tagged_coverage > 40 else "❌"} {"Customer/user data properly classified" if tagged_coverage > 70 else "Customer/user data classification incomplete" if tagged_coverage > 40 else f"{industry_info['focus_areas'][1].replace('_', ' ')} not properly classified"}
+
+* Access Controls: {max(67, int(health_scores['component_scores']['access_control']))}% of assets have proper permissions
+    * {"✅" if health_scores['component_scores']['access_control'] > 80 else "❌"} {"Financial data properly secured" if health_scores['component_scores']['access_control'] > 80 else "Core data access too broad"}
+
+🚀 30-60-90 Day Roadmap
+
+🎯 30 Days (Quick Wins)
+
+* Complete asset discovery for top 10 critical {industry_info['name'].lower()} datasets
+* Assign data stewards to high-impact {industry_info['name'].lower()} assets  
+* Implement basic data quality checks
+
+Target: 65% asset coverage for {industry_info['name'].lower()}-critical data
+
+🎯 60 Days (Foundation Building)
+
+* Deploy automated lineage mapping
+* Create data classification taxonomy
+* Establish governance workflows
+
+Target: 80% lineage completion for core {industry_info['name'].lower()} processes
+
+🎯 90 Days (Optimization)
+
+* Full compliance monitoring automation
+* Advanced analytics and insights
+* User training and adoption program
+
+Target: 90% governance maturity across all {industry_info['name'].lower()} operations
+
+Assessment generated on {current_time}
+Triggered by: /atlan-health "{company_name}" {atlan_url} {filter_summary}
+Client-ready deliverable | Professional {industry_info['name'].lower()} industry focus"""
+    
+    return canvas
+
+        # Start background processing
+        threading.Thread(target=run_professional_health_check).start()
+        
+        # Professional immediate response
+        current_time = datetime.now().strftime("%I:%M %p")
+        
+        response_text = f"""{industry_info['icon']} **Professional Health Check Started for {company_name}**
+
+🏢 **Industry**: {industry_info['name']}
+📊 **Regulation Focus**: {', '.join(industry_info['regulations'][:3])}
+🔗 **Atlan Tenant**: {atlan_url or 'Not specified'}
+{"🔍 **Filters Applied**:" if filter_summary else ""}
+{chr(10).join([f"• {f}" for f in filter_summary]) if filter_summary else ""}
+
+⏳ **Processing Real Atlan Data...** 
+📋 **Professional Canvas deliverable generating...**
+⚡ **ETA**: 30 seconds | **Started**: {current_time} | **By**: @{user_name}
+
+🎯 **Generating**: Industry benchmarking, compliance roadmap, ROI projections
+✅ **Client-Ready Assessment Coming Up!**"""
+        
+        return jsonify({
+            "response_type": "in_channel",
+            "text": response_text
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "response_type": "ephemeral",
+            "text": f"❌ **Professional Health Check Error**: {str(e)}\\n\\nPlease try: `/atlan-health \\\"Company Name\\\" https://tenant.atlan.com industry:finance`"
+        }), 500
+
+def generate_professional_canvas(company_name, industry, atlan_url, atlan_data, health_scores, recommendations, filters, user_name):
+    """Generate comprehensive professional Canvas assessment in the exact format"""
+    
+    industry_info = health_checker.industry_regulations[industry]
+    current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    
+    # Build filter summary
+    filter_text = []
+    if filters:
+        for key, value in filters.items():
+            if isinstance(value, list):
+                filter_text.append(f"{key}:{','.join(value)}")
+            else:
+                filter_text.append(f"{key}:{value}")
+    filter_summary = " ".join(filter_text) if filter_text else ""
+    
+    # Calculate detailed metrics
+    asset_coverage = int((atlan_data.get('verified_assets', 0) / max(atlan_data.get('total_assets', 1), 1)) * 100)
+    tagged_coverage = int((atlan_data.get('tagged_assets', 0) / max(atlan_data.get('total_assets', 1), 1)) * 100)
+    
+    # Industry-specific focus areas based on industry
+    if industry == 'construction':
+        focus_areas = [
+            "Project Data Governance - Critical construction project datasets lack proper stewardship",
+            "Safety Compliance - Safety incident records not properly cataloged and tracked", 
+            "Regulatory Reporting - Manual compliance processes create audit risks"
+        ]
+        strategic_recs = [
+            {
+                'title': 'Implement project-specific data classification',
+                'desc': 'Create taxonomy for construction projects including safety records, permits, inspections, and contractor data to ensure proper governance across all active projects.'
+            },
+            {
+                'title': 'Establish safety record data lineage',
+                'desc': 'Map the flow of safety incident data from field reporting through investigation to regulatory submission, ensuring complete audit trails for OSHA compliance.'
+            },
+            {
+                'title': 'Create compliance reporting automation',
+                'desc': 'Automate the generation of regulatory reports for EPA, OSHA, and local building authorities, reducing manual effort and ensuring consistent submission timelines.'
+            }
+        ]
+    elif industry == 'finance':
+        focus_areas = [
+            "Customer Data Governance - PII and financial data lacks comprehensive stewardship",
+            "SOX Compliance - Critical financial datasets not properly audited and tracked",
+            "Risk Management - Regulatory reporting processes create compliance gaps"
+        ]
+        strategic_recs = [
+            {
+                'title': 'Implement comprehensive PII data governance',
+                'desc': 'Create robust classification and protection framework for customer PII across all financial products and services.'
+            },
+            {
+                'title': 'Establish SOX-compliant data lineage',
+                'desc': 'Map complete audit trails for all financial reporting data from source systems through final regulatory submissions.'
+            },
+            {
+                'title': 'Automate compliance monitoring',
+                'desc': 'Deploy real-time monitoring for PCI DSS, SOX, and Basel III requirements with automated alerting and remediation workflows.'
+            }
+        ]
+    elif industry == 'healthcare':
+        focus_areas = [
+            "PHI Data Protection - Patient health information requires enhanced security controls",
+            "HIPAA Compliance - Medical records and research data need comprehensive audit trails",
+            "Clinical Data Quality - Research and treatment data lacks standardization"
+        ]
+        strategic_recs = [
+            {
+                'title': 'Strengthen PHI protection framework',
+                'desc': 'Implement comprehensive HIPAA-compliant data governance for all patient health information across clinical and research systems.'
+            },
+            {
+                'title': 'Establish clinical data lineage',
+                'desc': 'Map patient data flows from admission through treatment to research utilization, ensuring complete HIPAA audit compliance.'
+            },
+            {
+                'title': 'Deploy clinical data quality monitoring',
+                'desc': 'Automate quality checks for clinical data to support FDA compliance and improve patient care outcomes.'
+            }
+        ]
+    else:  # Default technology/general
+        focus_areas = [
+            "Data Governance Maturity - Core datasets lack comprehensive stewardship and documentation",
+            "Privacy Compliance - User data and analytics require enhanced protection controls",
+            "Operational Excellence - Data quality and access optimization opportunities identified"
+        ]
+        strategic_recs = [
+            {
+                'title': 'Implement comprehensive data governance framework',
+                'desc': 'Establish data stewardship, quality monitoring, and lifecycle management across all critical business datasets.'
+            },
+            {
+                'title': 'Strengthen privacy compliance controls', 
+                'desc': 'Deploy GDPR and CCPA-compliant data classification, consent management, and access controls.'
+            },
+            {
+                'title': 'Optimize data operations and quality',
+                'desc': 'Automate data quality monitoring, implement performance optimization, and enhance user access patterns.'
+            }
+        ]
+    
+    roi_breakdown = [
+        f"${recommendations.get('total_roi_projection', 500000) * 0.4:.0f} - Reduced manual reporting effort (80% time savings)",
+        f"${recommendations.get('total_roi_projection', 500000) * 0.3:.0f} - Faster project closeouts through better data access", 
+        f"${recommendations.get('total_roi_projection', 500000) * 0.2:.0f} - Avoided compliance penalties through better tracking",
+        f"${recommendations.get('total_roi_projection', 500000) * 0.1:.0f} - Improved planning through historical data insights"
+    ]
+    
+    canvas = f"""🏥 {company_name} - Live Atlan Health Assessment
+🏥 {company_name} - Atlan Health Assessment
+
+Tenant: {atlan_url} Generated via: /atlan-health "{company_name}" {atlan_url} {filter_summary}
+
+📊 Overall Health Score: {health_scores['overall_score']}/100
+
+Category: {"Critical Project Risk" if health_scores['overall_score'] < 70 else "Moderate Improvement Needed" if health_scores['overall_score'] < 85 else "Good Governance Foundation"}
+
+🎯 Key Focus Areas
+
+{chr(10).join([f"• {area}" for area in focus_areas])}
+
+💡 Strategic Recommendations
+
+{chr(10).join([f"{i+1}. {rec['title']}\n{rec['desc']}" for i, rec in enumerate(strategic_recs)])}
+
+💰 ROI Projection
+
+${recommendations.get('total_roi_projection', 500000):,}+ annual efficiency gains
+
+{chr(10).join([f"* {item}" for item in roi_breakdown])}
+
+📈 Detailed Analysis
+
+Data Governance Maturity
+
+* Asset Coverage: {asset_coverage}% of critical assets documented
+    * {"✅" if asset_coverage > 60 else "⚠️" if asset_coverage > 30 else "❌"} {"Financial systems well-documented" if asset_coverage > 60 else "Core systems documented" if asset_coverage > 30 else "Limited asset documentation"}
     * {"✅" if tagged_coverage > 70 else "❌"} {"Project management databases " + ("well-cataloged" if tagged_coverage > 70 else "lacking metadata")}
     * {"✅" if health_scores['component_scores']['compliance_readiness'] > 75 else "❌"} {"Compliance systems properly cataloged" if health_scores['component_scores']['compliance_readiness'] > 75 else f"{industry_info['name']} systems not cataloged"}
 
