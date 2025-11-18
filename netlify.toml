@@ -2,6 +2,11 @@
   functions = "netlify/functions"
 
 [[redirects]]
+  from = "/slack/atlan-setup"
+  to = "/.netlify/functions/slack-command"
+  status = 200
+
+[[redirects]]
   from = "/"
   to = "/.netlify/functions/health"
   status = 200
