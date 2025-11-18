@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timedelta
 import random
 import os
+import requests
 
 app = Flask(__name__)
 
@@ -841,11 +842,15 @@ def slack_command():
                 else:
                     filter_summary.append(f"**{key.title()}**: {value}")
         
+        # Get response_url for follow-up message
+        response_url = request.form.get("response_url")
+        
         # Start async health check with Canvas generation
         def run_professional_health_check():
             try:
                 import asyncio
                 import sys
+                import requests
                 
                 # Create new event loop for thread
                 loop = asyncio.new_event_loop()
@@ -876,17 +881,73 @@ def slack_command():
                         health_scores, recommendations, filters, user_name
                     )
                     
-                    # Output the professional assessment
+                    # Output the professional assessment to console/logs
                     print("🏥" + "="*60)
                     print("PROFESSIONAL CANVAS ASSESSMENT GENERATED WITH REAL ATLAN DATA")  
                     print("="*62)
                     print(canvas_content)
                     print("="*62)
                     
+                    # Send the Canvas assessment back to Slack
+                    if response_url:
+                        try:
+                            # Split content into chunks if too long for Slack (max ~4000 chars per message)
+                            max_length = 3900
+                            if len(canvas_content) > max_length:
+                                # Split into multiple messages
+                                lines = canvas_content.split('\n')
+                                current_chunk = ""
+                                chunk_count = 1
+                                
+                                for line in lines:
+                                    if len(current_chunk + line + '\n') > max_length:
+                                        # Send current chunk
+                                        chunk_message = f"📋 **Professional Canvas Assessment - Part {chunk_count}**\n\n```\n{current_chunk}\n```"
+                                        requests.post(response_url, json={
+                                            "text": chunk_message,
+                                            "response_type": "in_channel"
+                                        }, timeout=10)
+                                        current_chunk = line + '\n'
+                                        chunk_count += 1
+                                    else:
+                                        current_chunk += line + '\n'
+                                
+                                # Send final chunk
+                                if current_chunk:
+                                    chunk_message = f"📋 **Professional Canvas Assessment - Part {chunk_count}**\n\n```\n{current_chunk}\n```"
+                                    requests.post(response_url, json={
+                                        "text": chunk_message,
+                                        "response_type": "in_channel"
+                                    }, timeout=10)
+                            else:
+                                # Send as single message
+                                final_message = f"📋 **Professional Canvas Assessment Complete!**\n\n```\n{canvas_content}\n```"
+                                requests.post(response_url, json={
+                                    "text": final_message,
+                                    "response_type": "in_channel"
+                                }, timeout=10)
+                            
+                            print("✅ Canvas assessment sent to Slack successfully")
+                        except Exception as slack_error:
+                            print(f"❌ Failed to send Canvas to Slack: {slack_error}")
+                    else:
+                        print("⚠️ No response_url available - Canvas only printed to console")
+                    
                 except Exception as e:
                     print(f"❌ Error in health check generation: {str(e)}")
                     import traceback
                     traceback.print_exc()
+                    
+                    # Send error message to Slack
+                    if response_url:
+                        try:
+                            error_message = f"❌ **Health Check Error for {company_name}**\n\nError: {str(e)}\n\nPlease check the logs for more details."
+                            requests.post(response_url, json={
+                                "text": error_message,
+                                "response_type": "ephemeral"
+                            }, timeout=10)
+                        except:
+                            pass
                     
                 finally:
                     loop.close()
