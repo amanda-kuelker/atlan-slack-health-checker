@@ -1,1 +1,1 @@
-web: python slack_webhook_handler.py
+web: python app.py
