@@ -340,12 +340,6 @@ class AtlanCustomerHealthCheck:
 import subprocess
 
 async def call_atlan_mcp_tool(tool_name, parameters):
-    """Actually call the Atlan MCP tools"""
-    try:
-        print(f"🔧 Calling REAL Atlan MCP tool: {tool_name}")
-        print(f"📋 Parameters: {json.dumps(parameters, indent=2)}")
-        
-async def call_atlan_mcp_tool(tool_name, parameters):
     """Actually call the Atlan MCP tools with proper error handling"""
     try:
         print(f"🔧 Calling REAL Atlan MCP tool: {tool_name}")
@@ -572,16 +566,6 @@ async def get_real_atlan_tenant_data(parameters):
         'data_source': 'REAL_ATLAN_TENANT_STRUCTURE',
         'tenant_verification': 'Using actual asset GUIDs and qualified names from your Atlan tenant'
     }
-            
-    except Exception as e:
-        print(f"❌ Real MCP tool call failed, falling back to simulation: {str(e)}")
-        # Fallback to simulation if real MCP fails
-        if tool_name == "atlan:search_assets_tool":
-            return await simulate_search_assets_response(parameters)
-        elif tool_name == "atlan:get_assets_by_dsl_tool":
-            return await simulate_dsl_response(parameters)
-        else:
-            return {"error": str(e)}
 
 async def simulate_search_assets_response(parameters):
     """Simulate what atlan:search_assets_tool would return with REAL data structure from actual Atlan tenant"""
