@@ -1,12 +1,16 @@
 [build]
+  command = "pip install -r requirements.txt"
   functions = "netlify/functions"
+  publish = "."
 
 [[redirects]]
   from = "/slack/atlan-setup"
   to = "/.netlify/functions/slack-command"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/"
   to = "/.netlify/functions/health"
   status = 200
+  force = true
