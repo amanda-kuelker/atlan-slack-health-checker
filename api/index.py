@@ -813,8 +813,7 @@ def slack_command():
 • **asset_type** - Asset types (Table, Column, Dashboard, etc.)
 
 💼 **Perfect for Sales Teams, Customer Success, and Solutions Engineering**
-🚀 **Generate professional, client-ready assessments in under 30 seconds!**
-🔧 **Now with REAL Atlan MCP integration for live tenant data!**"""
+🚀 **Generate professional, client-ready assessments with real Atlan data!**"""
             })
         
         # Parse the professional command
@@ -833,159 +832,92 @@ def slack_command():
         industry = health_checker.detect_industry_professional(company_name, filters)
         industry_info = health_checker.industry_regulations[industry]
         
-        # Build filter summary for immediate response
-        filter_summary = []
-        if filters:
-            for key, value in filters.items():
-                if isinstance(value, list):
-                    filter_summary.append(f"**{key.title()}**: {', '.join(value)}")
-                else:
-                    filter_summary.append(f"**{key.title()}**: {value}")
+        print(f"🔍 Processing health check for {company_name} ({industry})")
+        print(f"🔗 Tenant: {atlan_url}")
+        print(f"🔧 Filters: {filters}")
         
-        # Get response_url for follow-up message
-        response_url = request.form.get("response_url")
-        
-        # Start async health check with Canvas generation
-        def run_professional_health_check():
+        # Do ALL processing synchronously and return complete result
+        try:
+            import asyncio
+            
+            # Create event loop for async processing
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
             try:
-                import asyncio
-                import sys
-                import requests
+                # Fetch Atlan data using real MCP integration
+                print("🔍 Fetching real Atlan data...")
+                atlan_data = loop.run_until_complete(
+                    health_checker.fetch_atlan_data(atlan_url, filters)
+                )
                 
-                # Create new event loop for thread
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+                print(f"📊 Data source: {atlan_data.get('data_source', 'Unknown')}")
+                print(f"📈 Assets found: {atlan_data.get('total_assets', 0)}")
                 
-                try:
-                    # Fetch Atlan data using real MCP integration
-                    atlan_data = loop.run_until_complete(
-                        health_checker.fetch_atlan_data(atlan_url, filters)
-                    )
+                # Calculate professional health scores
+                print("🧮 Calculating health scores...")
+                health_scores = health_checker.calculate_professional_health_score(
+                    industry, atlan_data, filters
+                )
+                
+                # Generate recommendations and ROI projections
+                print("💡 Generating recommendations...")
+                recommendations = health_checker.generate_professional_recommendations(
+                    industry, health_scores, filters
+                )
+                
+                # Generate the comprehensive Canvas assessment
+                print("📋 Creating Canvas assessment...")
+                canvas_content = generate_professional_canvas(
+                    company_name, industry, atlan_url, atlan_data, 
+                    health_scores, recommendations, filters, user_name
+                )
+                
+                print("✅ Canvas assessment complete!")
+                
+                # Return the Canvas assessment directly to Slack
+                # Split into chunks if too long (Slack has ~4000 char limit per message)
+                max_length = 3800  # Leave some buffer
+                
+                if len(canvas_content) <= max_length:
+                    # Single message
+                    return jsonify({
+                        "response_type": "in_channel",
+                        "text": f"📋 **Professional Canvas Assessment Complete!**\n\n```\n{canvas_content}\n```"
+                    })
+                else:
+                    # For long content, return the first chunk and mention it's part 1
+                    lines = canvas_content.split('\n')
+                    first_chunk = ""
                     
-                    print(f"🔍 Fetched Atlan data: {atlan_data.get('data_source', 'Unknown source')}")
-                    print(f"📊 Assets found: {atlan_data.get('total_assets', 0)}")
+                    for line in lines:
+                        if len(first_chunk + line + '\n') > max_length:
+                            break
+                        first_chunk += line + '\n'
                     
-                    # Calculate professional health scores
-                    health_scores = health_checker.calculate_professional_health_score(
-                        industry, atlan_data, filters
-                    )
+                    return jsonify({
+                        "response_type": "in_channel", 
+                        "text": f"📋 **Professional Canvas Assessment for {company_name}**\n\n```\n{first_chunk}\n```\n\n*Assessment complete! Health Score: {health_scores['overall_score']}/100 ({health_scores['grade']})*"
+                    })
                     
-                    # Generate recommendations and ROI projections
-                    recommendations = health_checker.generate_professional_recommendations(
-                        industry, health_scores, filters
-                    )
-                    
-                    # Generate the comprehensive Canvas assessment
-                    canvas_content = generate_professional_canvas(
-                        company_name, industry, atlan_url, atlan_data, 
-                        health_scores, recommendations, filters, user_name
-                    )
-                    
-                    # Output the professional assessment to console/logs
-                    print("🏥" + "="*60)
-                    print("PROFESSIONAL CANVAS ASSESSMENT GENERATED WITH REAL ATLAN DATA")  
-                    print("="*62)
-                    print(canvas_content)
-                    print("="*62)
-                    
-                    # Send the Canvas assessment back to Slack
-                    if response_url:
-                        try:
-                            # Split content into chunks if too long for Slack (max ~4000 chars per message)
-                            max_length = 3900
-                            if len(canvas_content) > max_length:
-                                # Split into multiple messages
-                                lines = canvas_content.split('\n')
-                                current_chunk = ""
-                                chunk_count = 1
-                                
-                                for line in lines:
-                                    if len(current_chunk + line + '\n') > max_length:
-                                        # Send current chunk
-                                        chunk_message = f"📋 **Professional Canvas Assessment - Part {chunk_count}**\n\n```\n{current_chunk}\n```"
-                                        requests.post(response_url, json={
-                                            "text": chunk_message,
-                                            "response_type": "in_channel"
-                                        }, timeout=10)
-                                        current_chunk = line + '\n'
-                                        chunk_count += 1
-                                    else:
-                                        current_chunk += line + '\n'
-                                
-                                # Send final chunk
-                                if current_chunk:
-                                    chunk_message = f"📋 **Professional Canvas Assessment - Part {chunk_count}**\n\n```\n{current_chunk}\n```"
-                                    requests.post(response_url, json={
-                                        "text": chunk_message,
-                                        "response_type": "in_channel"
-                                    }, timeout=10)
-                            else:
-                                # Send as single message
-                                final_message = f"📋 **Professional Canvas Assessment Complete!**\n\n```\n{canvas_content}\n```"
-                                requests.post(response_url, json={
-                                    "text": final_message,
-                                    "response_type": "in_channel"
-                                }, timeout=10)
-                            
-                            print("✅ Canvas assessment sent to Slack successfully")
-                        except Exception as slack_error:
-                            print(f"❌ Failed to send Canvas to Slack: {slack_error}")
-                    else:
-                        print("⚠️ No response_url available - Canvas only printed to console")
-                    
-                except Exception as e:
-                    print(f"❌ Error in health check generation: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    
-                    # Send error message to Slack
-                    if response_url:
-                        try:
-                            error_message = f"❌ **Health Check Error for {company_name}**\n\nError: {str(e)}\n\nPlease check the logs for more details."
-                            requests.post(response_url, json={
-                                "text": error_message,
-                                "response_type": "ephemeral"
-                            }, timeout=10)
-                        except:
-                            pass
-                    
-                finally:
-                    loop.close()
-                    
-            except Exception as e:
-                print(f"❌ Error in professional health check: {str(e)}")
-
-        # Start background processing
-        threading.Thread(target=run_professional_health_check).start()
-        
-        # Immediate response
-        current_time = datetime.now().strftime("%I:%M %p")
-        
-        response_text = f"""{industry_info['icon']} **Professional Health Check Started for {company_name}**
-
-🏢 **Industry**: {industry_info['name']}
-📊 **Regulation Focus**: {', '.join(industry_info['regulations'][:3])}
-🔗 **Atlan Tenant**: {atlan_url or 'dsm.atlan.com'}
-{"🔍 **Filters Applied**:" if filter_summary else ""}
-{chr(10).join([f"• {f}" for f in filter_summary]) if filter_summary else ""}
-
-⏳ **Processing Real Atlan Data...** 
-🔧 **MCP Integration**: Fetching live tenant assets
-📋 **Professional Canvas deliverable generating...**
-⚡ **ETA**: 30 seconds | **Started**: {current_time} | **By**: @{user_name}
-
-🎯 **Generating**: Industry benchmarking, compliance roadmap, ROI projections
-✅ **Client-Ready Assessment with Real Data Coming Up!**"""
-        
-        return jsonify({
-            "response_type": "in_channel",
-            "text": response_text
-        })
+            finally:
+                loop.close()
+                
+        except Exception as e:
+            print(f"❌ Error during processing: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            return jsonify({
+                "response_type": "ephemeral",
+                "text": f"❌ **Health Check Error for {company_name}**\n\nError: {str(e)}\n\nPlease try again or contact support."
+            })
         
     except Exception as e:
+        print(f"❌ Slack command error: {str(e)}")
         return jsonify({
             "response_type": "ephemeral",
-            "text": f"❌ **Professional Health Check Error**: {str(e)}\\n\\nPlease try: `/atlan-health \\\"Company Name\\\" https://tenant.atlan.com industry:finance`"
+            "text": f"❌ **Command Error**: {str(e)}\n\nPlease try: `/atlan-health \"Company Name\" https://tenant.atlan.com industry:finance`"
         }), 500
 
 # Error handler
