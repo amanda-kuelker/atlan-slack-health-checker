@@ -1,0 +1,28 @@
+[build]
+  command = "pip install -r requirements.txt"
+  functions = "netlify/functions"
+  publish = "."
+
+[build.environment]
+  PYTHONPATH = "/opt/buildhome/python3.8/lib/python3.8/site-packages:/var/runtime:/var/task:$PYTHONPATH"
+
+[[redirects]]
+  from = "/slack/atlan-setup"
+  to = "/.netlify/functions/slack-command"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/test"
+  to = "/.netlify/functions/test"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/health"
+  status = 200
+  force = true
+
+[functions]
+  python_runtime = "python3.8"
