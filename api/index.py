@@ -342,23 +342,21 @@ import subprocess
 async def call_atlan_mcp_tool(tool_name, parameters):
     """Actually call the Atlan MCP tools with proper error handling"""
     try:
-        print(f"🔧 Calling REAL Atlan MCP tool: {tool_name}")
+        print(f"🔧 Attempting real Atlan MCP tool: {tool_name}")
         print(f"📋 Parameters: {json.dumps(parameters, indent=2)}")
         
         if tool_name == "atlan:search_assets_tool":
             try:
                 # Try to import and use the real MCP tools if available
-                import subprocess
-                import sys
+                print("🔧 Testing direct MCP tool access...")
                 
-                # First try: direct MCP call (this would work if MCP client is available)
-                print("🔧 Attempting direct MCP tool access...")
-                
-                # This will fail in Flask but show the attempt
+                # Attempt to actually call the MCP tools
                 from atlan import search_assets_tool
                 result = await search_assets_tool(**parameters)
                 
-                # If we get here, it worked!
+                print("✅ SUCCESS: Real MCP tool call worked!")
+                
+                # If we get here, it actually worked!
                 return {
                     'assets': result if isinstance(result, list) else [],
                     'total_count': len(result) if isinstance(result, list) else 0,
@@ -370,16 +368,34 @@ async def call_atlan_mcp_tool(tool_name, parameters):
                 }
                 
             except ImportError as import_error:
-                print(f"⚠️ Direct MCP import failed: {import_error}")
-                print("🔧 Falling back to enhanced real data simulation...")
+                print(f"❌ MCP import failed: {import_error}")
+                print("🔧 MCP tools not available in Flask environment")
                 
-                # Use the real data structure I found from your tenant
-                return await get_real_atlan_tenant_data(parameters)
+                # Be honest - this is simulation
+                return {
+                    'assets': [],
+                    'total_count': 0,
+                    'verified_count': 0,
+                    'tagged_count': 0,
+                    'search_successful': False,
+                    'parameters_used': parameters,
+                    'data_source': 'MCP_NOT_AVAILABLE',
+                    'error': 'MCP tools not accessible in Flask environment'
+                }
                 
             except Exception as mcp_error:
-                print(f"⚠️ MCP direct call failed: {mcp_error}")
-                print("🔧 Using real tenant data structure...")
-                return await get_real_atlan_tenant_data(parameters)
+                print(f"❌ MCP call failed: {mcp_error}")
+                
+                return {
+                    'assets': [],
+                    'total_count': 0,
+                    'verified_count': 0,
+                    'tagged_count': 0,
+                    'search_successful': False,
+                    'parameters_used': parameters,
+                    'data_source': 'MCP_FAILED',
+                    'error': str(mcp_error)
+                }
                 
         elif tool_name == "atlan:get_assets_by_dsl_tool":
             try:
@@ -391,16 +407,26 @@ async def call_atlan_mcp_tool(tool_name, parameters):
                     'data_source': 'REAL_MCP_DIRECT_CALL'
                 }
             except Exception as e:
-                return await simulate_dsl_response(parameters)
+                return {
+                    'hits': {},
+                    'dsl_successful': False,
+                    'data_source': 'MCP_FAILED',
+                    'error': str(e)
+                }
         else:
             return {"error": f"Tool {tool_name} not implemented"}
             
     except Exception as e:
-        print(f"❌ MCP tool call failed completely, using real data structure: {str(e)}")
-        if tool_name == "atlan:search_assets_tool":
-            return await get_real_atlan_tenant_data(parameters)
-        else:
-            return {"error": str(e)}
+        print(f"❌ Complete MCP failure: {str(e)}")
+        return {
+            'assets': [],
+            'total_count': 0,
+            'verified_count': 0,
+            'tagged_count': 0,
+            'search_successful': False,
+            'data_source': 'MCP_COMPLETE_FAILURE',
+            'error': str(e)
+        }
 
 async def get_real_atlan_tenant_data(parameters):
     """Use the REAL data structure from your actual Atlan tenant"""
@@ -701,116 +727,111 @@ async def simulate_dsl_response(parameters):
     }
 
 async def fetch_real_atlan_data(atlan_url, filters):
-    """Fetch real data from Atlan tenant using the actual MCP tools available"""
+    """Only fetch data if we can actually get real Atlan MCP data"""
     try:
-        print(f"🔍 Fetching REAL Atlan data from: {atlan_url}")
-        print(f"🔧 Applying filters: {filters}")
-        print(f"✅ MCP TOOLS AVAILABLE: atlan:search_assets_tool is working!")
+        print(f"🔍 Testing connection to Atlan tenant: {atlan_url}")
+        print(f"🔧 Checking MCP tool availability...")
         
-        # Build search parameters for the atlan:search_assets_tool
-        search_params = {
-            "limit": 50,
-            "include_attributes": [
-                "name", "qualified_name", "certificate_status", "owner_users", 
-                "asset_tags", "description", "user_description", "connector_name",
-                "popularity_score", "source_read_count", "source_last_read_at"
-            ]
+        # Build search parameters for testing MCP connection
+        test_params = {
+            "limit": 1,
+            "include_attributes": ["name", "qualified_name"]
         }
         
-        # Apply user filters to Atlan search parameters
-        if filters:
-            if 'tags' in filters:
-                tags_list = filters['tags'] if isinstance(filters['tags'], list) else [filters['tags']]
-                search_params["tags"] = tags_list
-                search_params["directly_tagged"] = True
-            
-            if 'connections' in filters:
-                connection_names = filters['connections'] if isinstance(filters['connections'], list) else [filters['connections']]
-                search_params["connection_qualified_name"] = f"default/{connection_names[0].lower()}*"
-            
-            if 'certificate' in filters:
-                cert_status = filters['certificate']
-                if isinstance(cert_status, list):
-                    cert_status = cert_status[0]
-                if cert_status.upper() in ['VERIFIED', 'DRAFT', 'DEPRECATED']:
-                    search_params["conditions"] = {
-                        "certificate_status": cert_status.upper()
-                    }
-            
-            if 'asset_type' in filters:
-                asset_type = filters['asset_type']
-                if isinstance(asset_type, list):
-                    asset_type = asset_type[0]
-                search_params["asset_type"] = asset_type
+        print(f"🔍 Testing MCP connection with minimal search...")
         
-        print(f"🔍 Calling atlan:search_assets_tool with params: {search_params}")
+        # Test the MCP connection first
+        search_results = await call_atlan_mcp_tool("atlan:search_assets_tool", test_params)
         
-        # Make the actual MCP tool call (now using real Atlan data structure)
-        search_results = await call_atlan_mcp_tool("atlan:search_assets_tool", search_params)
-        
-        if search_results.get('search_successful'):
-            assets = search_results.get('assets', [])
-            print(f"✅ Successfully retrieved {len(assets)} assets from Atlan")
-            print(f"📊 DATA SOURCE: {search_results.get('data_source', 'REAL_ATLAN_TENANT')}")
+        if search_results.get('data_source') == 'REAL_MCP_DIRECT_CALL':
+            print("✅ REAL MCP connection confirmed!")
+            print("🏢 Proceeding with actual Atlan tenant data...")
             
-            # Process the real Atlan data
-            total_assets = search_results.get('total_count', len(assets))
-            verified_assets = search_results.get('verified_count', 0)
-            tagged_assets = search_results.get('tagged_count', 0)
-            
-            # Extract connection information from assets
-            connections = {}
-            for asset in assets:
-                conn_name = asset.get('connector_name', 'unknown')
-                if conn_name not in connections:
-                    connections[conn_name] = {
-                        'name': f'{conn_name.title()}-Connection',
-                        'connector_name': conn_name,
-                        'status': 'ACTIVE',
-                        'asset_count': 0
-                    }
-                connections[conn_name]['asset_count'] += 1
-            
-            result = {
-                'tenant_url': atlan_url,
-                'total_assets': total_assets,
-                'verified_assets': verified_assets,
-                'tagged_assets': tagged_assets,
-                'connections': list(connections.values()),
-                'sample_assets': assets[:5],  # First 5 assets as samples
-                'search_filters_applied': search_params,
-                'real_data': True,
-                'mcp_call_successful': True,
-                'data_source': 'REAL_ATLAN_TENANT_DATA',
-                'timestamp': datetime.now().isoformat()
+            # Now do the real search with user filters
+            real_search_params = {
+                "limit": 50,
+                "include_attributes": [
+                    "name", "qualified_name", "certificate_status", "owner_users", 
+                    "asset_tags", "description", "user_description", "connector_name",
+                    "popularity_score", "source_read_count", "source_last_read_at"
+                ]
             }
             
-            print(f"📊 REAL DATA SUMMARY:")
-            print(f"   Total Assets: {total_assets}")
-            print(f"   Verified: {verified_assets}")
-            print(f"   Tagged: {tagged_assets}")
-            print(f"   Connections: {len(connections)}")
-            print(f"   Sample Assets: {[a['name'] for a in assets[:3]]}")
+            # Apply user filters to real search
+            if filters:
+                if 'tags' in filters:
+                    tags_list = filters['tags'] if isinstance(filters['tags'], list) else [filters['tags']]
+                    real_search_params["tags"] = tags_list
+                    real_search_params["directly_tagged"] = True
+                
+                if 'connections' in filters:
+                    connection_names = filters['connections'] if isinstance(filters['connections'], list) else [filters['connections']]
+                    real_search_params["connection_qualified_name"] = f"default/{connection_names[0].lower()}*"
+                
+                if 'certificate' in filters:
+                    cert_status = filters['certificate']
+                    if isinstance(cert_status, list):
+                        cert_status = cert_status[0]
+                    if cert_status.upper() in ['VERIFIED', 'DRAFT', 'DEPRECATED']:
+                        real_search_params["conditions"] = {
+                            "certificate_status": cert_status.upper()
+                        }
+                
+                if 'asset_type' in filters:
+                    asset_type = filters['asset_type']
+                    if isinstance(asset_type, list):
+                        asset_type = asset_type[0]
+                    real_search_params["asset_type"] = asset_type
             
-            return result
+            # Make the real search with filters
+            real_results = await call_atlan_mcp_tool("atlan:search_assets_tool", real_search_params)
             
+            if real_results.get('search_successful'):
+                assets = real_results.get('assets', [])
+                print(f"✅ Retrieved {len(assets)} real assets from Atlan")
+                
+                # Process the genuine Atlan data
+                total_assets = real_results.get('total_count', len(assets))
+                verified_assets = real_results.get('verified_count', 0)
+                tagged_assets = real_results.get('tagged_count', 0)
+                
+                # Extract connection information from real assets
+                connections = {}
+                for asset in assets:
+                    conn_name = asset.get('connector_name', 'unknown')
+                    if conn_name not in connections:
+                        connections[conn_name] = {
+                            'name': f'{conn_name.title()}-Connection',
+                            'connector_name': conn_name,
+                            'status': 'ACTIVE',
+                            'asset_count': 0
+                        }
+                    connections[conn_name]['asset_count'] += 1
+                
+                return {
+                    'tenant_url': atlan_url,
+                    'total_assets': total_assets,
+                    'verified_assets': verified_assets,
+                    'tagged_assets': tagged_assets,
+                    'connections': list(connections.values()),
+                    'sample_assets': assets[:5],
+                    'search_filters_applied': real_search_params,
+                    'real_data': True,
+                    'mcp_call_successful': True,
+                    'data_source': 'GENUINE_ATLAN_MCP_DATA',
+                    'timestamp': datetime.now().isoformat()
+                }
+            else:
+                print("❌ Real MCP search failed")
+                return None
         else:
-            print(f"❌ MCP search failed: {search_results.get('error', 'Unknown error')}")
-            return await simulate_atlan_mcp_call(search_params, filters)
+            print(f"❌ MCP not available: {search_results.get('data_source')}")
+            print(f"❌ Error: {search_results.get('error', 'Unknown')}")
+            return None
         
     except Exception as e:
-        print(f"❌ Error in fetch_real_atlan_data: {str(e)}")
-        # Return fallback data structure
-        return {
-            'tenant_url': atlan_url,
-            'total_assets': 250,
-            'verified_assets': 100,
-            'tagged_assets': 150,
-            'connections': [{'name': 'Fallback-DB', 'connector_name': 'database', 'status': 'healthy'}],
-            'error': f'MCP fetch failed: {str(e)}',
-            'search_filters_applied': filters,
-            'real_data': False
-        }
+        print(f"❌ Error testing Atlan MCP connection: {str(e)}")
+        return None
 
 async def simulate_atlan_mcp_call(search_conditions, filters):
     """Fallback simulation when MCP calls fail"""
@@ -1105,7 +1126,7 @@ def slack_command():
                 else:
                     filter_summary.append(f"**{key.title()}**: {value}")
         
-        # Start async health check with real Atlan data and Canvas generation
+        # Start async health check - but only show processing message if we can actually get real data
         def run_professional_health_check():
             try:
                 import asyncio
@@ -1116,71 +1137,70 @@ def slack_command():
                 asyncio.set_event_loop(loop)
                 
                 try:
-                    # Actually fetch real Atlan data using MCP tools
-                    atlan_data = loop.run_until_complete(
-                        fetch_real_atlan_data(atlan_url, filters)
-                    )
+                    # Test if we can actually get real Atlan data first
+                    print("🔧 Testing real Atlan MCP connection...")
                     
-                    # Calculate professional health scores with real data
-                    health_scores = health_checker.calculate_professional_health_score(
-                        industry, atlan_data, filters
-                    )
+                    # Try a simple search to verify MCP is working
+                    test_params = {
+                        "limit": 1,
+                        "include_attributes": ["name", "qualified_name"]
+                    }
                     
-                    # Generate recommendations and ROI projections
-                    recommendations = health_checker.generate_professional_recommendations(
-                        industry, health_scores, filters
-                    )
+                    # This will tell us if MCP is actually working
+                    test_result = loop.run_until_complete(call_atlan_mcp_tool("atlan:search_assets_tool", test_params))
                     
-                    # Generate the comprehensive Canvas assessment
-                    canvas_content = generate_professional_canvas(
-                        company_name, industry, atlan_url, atlan_data, 
-                        health_scores, recommendations, filters, user_name
-                    )
-                    
-                    # In production, this would create an actual Slack Canvas
-                    # For now, we'll log the full assessment content
-                    print("🏥" + "="*50)
-                    print("PROFESSIONAL CANVAS ASSESSMENT GENERATED")  
-                    print("="*52)
-                    print(canvas_content)
-                    print("="*52)
-                    
+                    if test_result.get('data_source') == 'REAL_MCP_DIRECT_CALL':
+                        print("✅ REAL MCP connection confirmed - proceeding with actual data")
+                        
+                        # Actually fetch real Atlan data using MCP tools
+                        atlan_data = loop.run_until_complete(
+                            fetch_real_atlan_data(atlan_url, filters)
+                        )
+                        
+                        # Calculate professional health scores with real data
+                        health_scores = health_checker.calculate_professional_health_score(
+                            industry, atlan_data, filters
+                        )
+                        
+                        # Generate recommendations and ROI projections
+                        recommendations = health_checker.generate_professional_recommendations(
+                            industry, health_scores, filters
+                        )
+                        
+                        # Generate the comprehensive Canvas assessment
+                        canvas_content = generate_professional_canvas(
+                            company_name, industry, atlan_url, atlan_data, 
+                            health_scores, recommendations, filters, user_name
+                        )
+                        
+                        print("🏥" + "="*50)
+                        print("REAL ATLAN DATA HEALTH ASSESSMENT GENERATED")  
+                        print("="*52)
+                        print(canvas_content)
+                        print("="*52)
+                        
+                    else:
+                        print("❌ Real Atlan MCP connection not available")
+                        print("🔧 MCP tools not accessible in this environment")
+                        print("⚠️ Cannot generate assessment without real data")
+                        
                 except Exception as e:
-                    print(f"❌ Error in MCP integration: {str(e)}")
-                    # Continue with simulated data as fallback
-                    atlan_data = {
-                        'total_assets': 150,
-                        'verified_assets': 45,
-                        'tagged_assets': 85,
-                        'connections': [{'name': 'Construction-DB', 'connector_name': 'database'}]
-                    }
-                    health_scores = {'overall_score': 72, 'grade': 'B', 'component_scores': {
-                        'data_governance': 65, 'data_quality': 70, 'metadata_completeness': 60,
-                        'access_control': 75, 'compliance_readiness': 68, 'usage_optimization': 80
-                    }}
-                    recommendations = {
-                        'recommendations': [{'priority': 'HIGH', 'area': 'Governance'}],
-                        'total_roi_projection': 400000
-                    }
-                    canvas_content = generate_professional_canvas(
-                        company_name, industry, atlan_url, atlan_data,
-                        health_scores, recommendations, filters, user_name
-                    )
-                    print(canvas_content)
+                    print(f"❌ Error testing MCP connection: {str(e)}")
+                    print("⚠️ Real Atlan data not available - assessment cancelled")
                     
                 finally:
                     loop.close()
                     
             except Exception as e:
-                print(f"❌ Error in professional health check: {str(e)}")
+                print(f"❌ Error in health check process: {str(e)}")
 
         # Start background processing
         threading.Thread(target=run_professional_health_check).start()
         
-        # Professional immediate response
+        # More honest immediate response - don't claim real data processing until verified
         current_time = datetime.now().strftime("%I:%M %p")
         
-        response_text = f"""{industry_info['icon']} **Professional Health Check Started for {company_name}**
+        response_text = f"""{industry_info['icon']} **Health Check Request Received for {company_name}**
 
 🏢 **Industry**: {industry_info['name']}
 📊 **Regulation Focus**: {', '.join(industry_info['regulations'][:3])}
@@ -1188,12 +1208,11 @@ def slack_command():
 {"🔍 **Filters Applied**:" if filter_summary else ""}
 {chr(10).join([f"• {f}" for f in filter_summary]) if filter_summary else ""}
 
-⏳ **Processing Real Atlan Data...** 
-📋 **Professional Canvas deliverable generating...**
-⚡ **ETA**: 30 seconds | **Started**: {current_time} | **By**: @{user_name}
+🔧 **Verifying Atlan MCP Connection...**
+⏳ **Testing real data access...**
+⚡ **Started**: {current_time} | **By**: @{user_name}
 
-🎯 **Generating**: Industry benchmarking, compliance roadmap, ROI projections
-✅ **Client-Ready Assessment Coming Up!**"""
+*Assessment will only proceed if real Atlan data is accessible*"""
         
         return jsonify({
             "response_type": "in_channel",
