@@ -11,7 +11,7 @@ exports.handler = async (event, context) => {
     console.log('Slack command:', text);
     
     // Demo canvas assessment (shortened for Slack's 4000 char limit)
-    const demoCanvas = `🏗️ DPR Construction - Data Governance Assessment
+    const demoCanvas = `🏗️ DPR Construction - Data Governance Assessment Demo
 
 Prepared by Atlan Professional Services | November 18, 2025
 
@@ -154,15 +154,3 @@ Ready to unlock your data's potential? Let's start with your highest-impact proc
     };
   }
 };
-```
-
-### **2. Set up Slack App:**
-
-1. **Update your Slack app configuration:**
-   - **Request URL**: `https://unique-creponne-cf145f.netlify.app/`
-   - **Command**: `/atlan-health`
-   - **Method**: POST
-
-2. **Test in Slack:**
-```
-/atlan-health DPR Construction
