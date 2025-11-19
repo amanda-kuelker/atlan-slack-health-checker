@@ -3,8 +3,18 @@
   functions = "netlify/functions"
   publish = "."
 
+[functions]
+  # Use Python runtime for all functions
+  external_node_modules = [""]
+
 [[redirects]]
   from = "/slack/atlan-setup"
+  to = "/.netlify/functions/slack-command"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/atlan-health"
   to = "/.netlify/functions/slack-command"
   status = 200
   force = true
