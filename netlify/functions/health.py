@@ -1,20 +1,10 @@
-import json
-
 def handler(event, context):
-    """Health check endpoint for Netlify"""
-    
+    """Simple health check function for Netlify"""
     return {
-        'statusCode': 200,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
         },
-        'body': json.dumps({
-            "status": "healthy",
-            "service": "Atlan Professional Health Check with MCP Integration - Netlify",
-            "version": "3.0.0-netlify",
-            "platform": "Netlify Functions"
-        })
+        "body": '{"status":"healthy","message":"Python function working","timestamp":"2025-11-18"}'
     }
