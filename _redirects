@@ -1,3 +1,4 @@
 /slack/atlan-setup /.netlify/functions/slack-command 200
-/test /.netlify/functions/test 200
+/atlan-health /.netlify/functions/slack-command 200
+/test /.netlify/functions/health 200
 / /.netlify/functions/health 200
